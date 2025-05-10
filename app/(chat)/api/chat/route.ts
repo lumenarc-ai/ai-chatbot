@@ -170,6 +170,8 @@ export async function POST(request: Request) {
                 : [
                     // Standard tools
                     'getWeather',
+                    // MCP tool explicitly listed for clarity
+                    'get_graph',
                     'createDocument',
                     'updateDocument',
                     'requestSuggestions',
