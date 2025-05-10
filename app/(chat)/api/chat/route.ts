@@ -25,6 +25,7 @@ import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
+import { demoGraphService } from '@/lib/services/demo-graph';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { geolocation } from '@vercel/functions';
@@ -149,44 +150,61 @@ export async function POST(request: Request) {
     await createStreamId({ streamId, chatId: id });
 
     const stream = createDataStream({
-      execute: (dataStream) => {
-        const result = streamText({
-          model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
-          messages,
-          maxSteps: 5,
-          experimental_activeTools:
-            selectedChatModel === 'chat-model-reasoning'
-              ? []
-              : [
-                  'getWeather',
-                  'createDocument',
-                  'updateDocument',
-                  'requestSuggestions',
-                ],
-          experimental_transform: smoothStream({ chunking: 'word' }),
-          experimental_generateMessageId: generateUUID,
-          tools: {
-            getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-            }),
-          },
-          onFinish: async ({ response }) => {
-            if (session.user?.id) {
-              try {
-                const assistantId = getTrailingMessageId({
-                  messages: response.messages.filter(
-                    (message) => message.role === 'assistant',
-                  ),
-                });
+      execute: async (dataStream) => {
+        try {
+          // Register MCP tools from the demo-graph service
+          const mcpTools = await demoGraphService.registerTools();
 
-                if (!assistantId) {
-                  throw new Error('No assistant message found!');
-                }
+          // Get the names of MCP tools for the activeTools array
+          const mcpToolNames = Object.keys(mcpTools);
+          console.log('Available MCP tools:', mcpToolNames);
+
+          const result = streamText({
+            model: myProvider.languageModel(selectedChatModel),
+            system: systemPrompt({ selectedChatModel, requestHints }),
+            messages,
+            maxSteps: 5,
+            experimental_activeTools:
+              selectedChatModel === 'chat-model-reasoning'
+                ? []
+                : [
+                    // Standard tools
+                    'getWeather',
+                    'createDocument',
+                    'updateDocument',
+                    'requestSuggestions',
+                    // MCP tools
+                    ...mcpToolNames,
+                  ],
+            experimental_transform: smoothStream({ chunking: 'word' }),
+            experimental_generateMessageId: generateUUID,
+            tools: {
+              // Standard tools
+              getWeather,
+              createDocument: createDocument({ session, dataStream }),
+              updateDocument: updateDocument({ session, dataStream }),
+              requestSuggestions: requestSuggestions({
+                session,
+                dataStream,
+              }),
+              // MCP tools
+              ...mcpTools,
+            },
+            onFinish: async ({ response }) => {
+              // Close the MCP client when done
+              await demoGraphService.closeClient();
+
+              if (session.user?.id) {
+                try {
+                  const assistantId = getTrailingMessageId({
+                    messages: response.messages.filter(
+                      (message) => message.role === 'assistant',
+                    ),
+                  });
+
+                  if (!assistantId) {
+                    throw new Error('No assistant message found!');
+                  }
 
                 const [, assistantMessage] = appendResponseMessages({
                   messages: [message],
@@ -222,6 +240,12 @@ export async function POST(request: Request) {
         result.mergeIntoDataStream(dataStream, {
           sendReasoning: true,
         });
+        } catch (error) {
+          console.error('Error in streamText execution:', error);
+          // Make sure to close the MCP client even if there's an error
+          await demoGraphService.closeClient();
+          throw error;
+        }
       },
       onError: () => {
         return 'Oops, an error occurred!';
@@ -237,7 +261,14 @@ export async function POST(request: Request) {
     } else {
       return new Response(stream);
     }
-  } catch (_) {
+  } catch (error) {
+    console.error('Error in POST handler:', error);
+    // Make sure to close the MCP client in case of any error
+    try {
+      await demoGraphService.closeClient();
+    } catch (closeError) {
+      console.error('Error closing MCP client:', closeError);
+    }
     return new Response('An error occurred while processing your request!', {
       status: 500,
     });
