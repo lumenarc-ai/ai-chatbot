@@ -1,19 +1,21 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import cx from 'classnames';
-import { toast } from 'sonner';
-import { JSONViewer } from './json-viewer';
-import { CopyIcon } from './icons';
-import { Button } from './ui/button';
+import { useEffect, useState } from "react";
+import cx from "classnames";
+import { toast } from "sonner";
+import { JSONViewer } from "./json-viewer";
+import { GraphViewer } from "./graph-viewer";
+import { DemoGraphLogo } from "./demo-graph-logo";
+import { CopyIcon } from "./icons";
+import { Button } from "./ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from './ui/tooltip';
+} from "./ui/tooltip";
 
-import { VisualizationType } from './demo-graph-tab';
+import { VisualizationType } from "./demo-graph-tab";
 
 interface DemoGraphData {
   title?: string;
@@ -25,19 +27,19 @@ interface DemoGraphData {
 
 // Sample data for when no data is provided
 const SAMPLE: DemoGraphData = {
-  title: 'Sample Graph',
-  description: 'This is a sample graph visualization',
-  visualizationType: 'graph',
+  title: "Sample Graph",
+  description: "This is a sample graph visualization",
+  visualizationType: "graph",
   data: {
     nodes: [
-      { id: 'A', label: 'Node A' },
-      { id: 'B', label: 'Node B' },
-      { id: 'C', label: 'Node C' },
+      { id: "A", label: "Node A" },
+      { id: "B", label: "Node B" },
+      { id: "C", label: "Node C" },
     ],
     edges: [
-      { from: 'A', to: 'B' },
-      { from: 'B', to: 'C' },
-      { from: 'C', to: 'A' },
+      { from: "A", to: "B" },
+      { from: "B", to: "C" },
+      { from: "C", to: "A" },
     ],
   },
 };
@@ -55,23 +57,24 @@ export function DemoGraphCanvas({
     };
 
     handleResize();
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
-    return () => window.removeEventListener('resize', handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Extract title and description from the graph data
-  const title = graphData.title || 'Demo Graph';
-  const description = graphData.description || 'Graph visualization';
-  const visualizationType = graphData.visualizationType || 'graph';
+  const title = graphData.title || "Demo Graph";
+  const description = graphData.description || "Graph visualization";
+  const visualizationType = graphData.visualizationType || "graph";
   const data = graphData.data || {};
 
   // Render the appropriate visualization based on the type
   const renderVisualization = () => {
     switch (visualizationType) {
-      case 'json':
+      case "json":
         return <JSONViewer data={data} />;
-      case 'graph':
+      case "graph":
+        return <GraphViewer data={data} />;
       default:
         return (
           <div className="bg-white rounded-lg p-4 h-40 flex items-center justify-center border border-green-200">
@@ -91,35 +94,28 @@ export function DemoGraphCanvas({
   const handleCopyData = async () => {
     try {
       await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      toast.success('JSON data copied to clipboard!');
+      toast.success("JSON data copied to clipboard!");
     } catch (error) {
-      toast.error('Failed to copy data');
-      console.error('Copy failed:', error);
+      toast.error("Failed to copy data");
+      console.error("Copy failed:", error);
     }
   };
 
   return (
     <div
       className={cx(
-        'flex flex-col gap-4 rounded-2xl p-4 skeleton-bg max-w-[800px]',
-        'bg-green-100 border border-green-200'
+        "flex flex-col gap-4 rounded-2xl p-4 skeleton-bg max-w-[800px]",
+        "bg-green-100 border border-green-200"
       )}
     >
       <div className="flex flex-row justify-between items-center">
         <div className="flex flex-row gap-2 items-center">
-          <div
-            className={cx(
-              'size-10 rounded-full skeleton-div',
-              'bg-green-300'
-            )}
-          />
-          <div className="text-2xl font-medium text-green-800">
-            {title}
-          </div>
+          <DemoGraphLogo size={40} />
+          <div className="text-2xl font-medium text-green-800">{title}</div>
         </div>
 
         {/* Copy button at top right - only show for JSON visualization */}
-        {visualizationType === 'json' && (
+        {visualizationType === "json" && (
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -137,9 +133,7 @@ export function DemoGraphCanvas({
         )}
       </div>
 
-      <div className="text-green-700 text-sm">
-        {description}
-      </div>
+      <div className="text-green-700 text-sm">{description}</div>
 
       {/* Render the appropriate visualization */}
       {renderVisualization()}

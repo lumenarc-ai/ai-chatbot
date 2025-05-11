@@ -1,50 +1,67 @@
-'use client';
+"use client";
 
-import { DemoGraphTab } from '@/components/demo-graph-tab';
+import { DemoGraphTab } from "@/components/demo-graph-tab";
+import sampleGraphData from "@/fixtures/demo-graph/responseiq";
 
 // Sample data with nodes, edges, and metadata
-const sampleGraphData = {
-  title: 'Graph Visualization Example',
-  description: 'This demonstrates the tabbed graph visualization component',
+const sampleGraphData1 = {
+  title: "Graph Visualization Example",
+  description: "This demonstrates the tabbed graph visualization component",
   data: {
     nodes: [
-      { id: 'A', label: 'Node A', properties: { type: 'start', color: 'green' } },
-      { id: 'B', label: 'Node B', properties: { type: 'process', color: 'blue' } },
-      { id: 'C', label: 'Node C', properties: { type: 'end', color: 'red' } },
-      { id: 'D', label: 'Node D', properties: { type: 'process', color: 'yellow' } },
+      { id: "docs", label: "docs", properties: { type: "process" } },
+      {
+        id: "execute",
+        label: "Execute Workflow",
+        properties: { type: "process", workflow: "ENDPOINT/VERSION" },
+      },
+      {
+        id: "edit",
+        label: "Edit Fields",
+        properties: { type: "process", manual: true },
+      },
+      {
+        id: "merge",
+        label: "Merge",
+        properties: { type: "process", append: true },
+      },
+      {
+        id: "sheets1",
+        label: "Google Sheets1",
+        properties: { type: "start", sheet: "sheet" },
+      },
+      {
+        id: "sheets2",
+        label: "Google Sheets",
+        properties: { type: "start", sheet: "sheet" },
+      },
+      {
+        id: "http",
+        label: "HTTP Request",
+        properties: { type: "process", url: "https://www.google.com" },
+      },
+      { id: "code1", label: "Code", properties: { type: "end" } },
+      { id: "code2", label: "Code1", properties: { type: "end" } },
     ],
     edges: [
-      { from: 'A', to: 'B', label: 'connects to', weight: 1 },
-      { from: 'B', to: 'C', label: 'connects to', weight: 2 },
-      { from: 'B', to: 'D', label: 'connects to', weight: 3 },
-      { from: 'D', to: 'C', label: 'connects to', weight: 4 },
+      { from: "docs", to: "execute", label: "101 items" },
+      { from: "execute", to: "edit", label: "101 items" },
+      { from: "edit", to: "code1", label: "101 items" },
+      { from: "code1", to: "code2" },
+      { from: "sheets1", to: "merge", label: "Port 1" },
+      { from: "sheets2", to: "merge", label: "Port 2" },
+      { from: "merge", to: "http", label: "538 items" },
+      { from: "http", to: "code1" },
     ],
     metadata: {
-      creator: 'Demo Graph System',
-      version: '1.0.0',
-      createdAt: '2025-05-11T16:30:00Z',
-      tags: ['demo', 'json', 'graph', 'visualization'],
-      description: 'A sample graph for testing the tabbed visualization component'
-    }
-  }
-};
-
-// Sample data with fewer nodes for a simpler graph
-const simpleGraphData = {
-  title: 'Simple Graph Example',
-  description: 'A simpler graph with fewer nodes and edges',
-  data: {
-    nodes: [
-      { id: 'A', label: 'Node A' },
-      { id: 'B', label: 'Node B' },
-      { id: 'C', label: 'Node C' },
-    ],
-    edges: [
-      { from: 'A', to: 'B' },
-      { from: 'B', to: 'C' },
-      { from: 'C', to: 'A' },
-    ],
-  }
+      creator: "Demo Graph System",
+      version: "1.0.0",
+      createdAt: "2025-05-11T16:30:00Z",
+      tags: ["demo", "json", "graph", "visualization"],
+      description:
+        "A sample graph for testing the tabbed visualization component",
+    },
+  },
 };
 
 export default function DemoGraphTestPage() {
@@ -53,13 +70,10 @@ export default function DemoGraphTestPage() {
       <h1 className="text-3xl font-bold">Demo Graph Visualizations</h1>
 
       <div>
-        <h2 className="text-2xl font-semibold mb-4">Tabbed Visualization (Default: JSON)</h2>
-        <DemoGraphTab graphData={sampleGraphData} defaultVisualization="json" />
-      </div>
-
-      <div>
-        <h2 className="text-2xl font-semibold mb-4">Tabbed Visualization (Default: Graph)</h2>
-        <DemoGraphTab graphData={simpleGraphData} defaultVisualization="graph" />
+        <DemoGraphTab
+          graphData={sampleGraphData}
+          defaultVisualization="graph"
+        />
       </div>
     </div>
   );

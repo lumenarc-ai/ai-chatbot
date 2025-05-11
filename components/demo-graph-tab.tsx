@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { DemoGraphCanvas } from './demo-graph-canvas';
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { DemoGraphCanvas } from "./demo-graph-canvas";
 
 // Define the visualization types
-export type VisualizationType = 'json' | 'graph' | 'network';
+export type VisualizationType = "json" | "graph" | "network";
 
 // Define the visualization configuration interface
 export interface VisualizationConfig {
@@ -17,14 +17,14 @@ export interface VisualizationConfig {
 // Define the available visualizations
 export const VISUALIZATIONS: VisualizationConfig[] = [
   {
-    id: 'json',
-    label: 'JSON',
-    description: 'View the graph data as JSON with syntax highlighting',
+    id: "json",
+    label: "JSON",
+    description: "View the graph data as JSON with syntax highlighting",
   },
   {
-    id: 'graph',
-    label: 'Graph',
-    description: 'View the graph as a visual network',
+    id: "graph",
+    label: "Graph",
+    description: "View the graph as a visual network",
   },
   // New visualizations can be added here
 ];
@@ -36,13 +36,14 @@ interface DemoGraphTabProps {
 
 export function DemoGraphTab({
   graphData,
-  defaultVisualization = 'json',
+  defaultVisualization = "json",
 }: DemoGraphTabProps) {
-  const [activeTab, setActiveTab] = useState<VisualizationType>(defaultVisualization);
+  const [activeTab, setActiveTab] =
+    useState<VisualizationType>(defaultVisualization);
 
   // Create a copy of the graph data with the selected visualization type
   const visualizedData = {
-    ...graphData,
+    data: graphData,
     visualizationType: activeTab,
   };
 
@@ -55,11 +56,11 @@ export function DemoGraphTab({
             key={viz.id}
             onClick={() => setActiveTab(viz.id)}
             className={cn(
-              'px-4 py-2 text-sm font-medium transition-colors',
-              'hover:text-green-800 hover:bg-green-50',
+              "px-4 py-2 text-sm font-medium transition-colors",
+              "hover:text-green-800 hover:bg-green-50",
               activeTab === viz.id
-                ? 'text-green-800 border-b-2 border-green-500 bg-green-50'
-                : 'text-green-600'
+                ? "text-green-800 border-b-2 border-green-500 bg-green-50"
+                : "text-green-600"
             )}
             title={viz.description}
           >
