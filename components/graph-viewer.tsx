@@ -234,7 +234,7 @@ function ActionPopup({
           : {
               left: popupPosition.x,
               top: popupPosition.y,
-              width: "700px", // Wider to accommodate two columns
+              width: "840px", // Wider to accommodate two columns with original sidebar width
               maxHeight: "600px",
               transform: "translate(-50%, 0)",
               marginTop: "0",
@@ -405,7 +405,7 @@ function ActionPopup({
         style={{ height: isMaximized ? "calc(90vh - 40px)" : "560px" }}
       >
         {/* Left column - Actions list */}
-        <div className="w-[350px] p-2 overflow-y-auto border-r border-gray-200">
+        <div className="w-[350px] min-w-[350px] p-2 overflow-y-auto border-r border-gray-200">
           {showGrouped
             ? // Render actions grouped by node
               Object.entries(nodeGroups).map(
@@ -414,18 +414,30 @@ function ActionPopup({
                     <div
                       className={`font-medium text-sm mb-2 px-2 py-1 rounded-md flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-colors ${
                         isFollowing && !followingActionsEnabled
-                          ? "text-gray-500 bg-gray-200"
+                          ? "text-gray-400 bg-gray-200"
                           : "text-gray-700 bg-gray-100"
                       }`}
                       onClick={() => toggleSection(nodeId)}
                     >
                       <span className="flex items-center">
-                        <span className="mr-2 text-gray-500">
+                        <span
+                          className={`mr-2 ${
+                            isFollowing && !followingActionsEnabled
+                              ? "text-gray-400"
+                              : "text-gray-500"
+                          }`}
+                        >
                           {collapsedSections[nodeId] ? "▶" : "▼"}
                         </span>
                         {label}
                         {isFollowing && (
-                          <span className="ml-2 text-xs bg-gray-300 text-gray-600 px-1.5 py-0.5 rounded">
+                          <span
+                            className={`ml-2 text-xs px-1.5 py-0.5 rounded ${
+                              followingActionsEnabled
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-300 text-gray-500"
+                            }`}
+                          >
                             Following
                           </span>
                         )}
@@ -456,8 +468,11 @@ function ActionPopup({
               ))}
         </div>
 
-        {/* Right column - Preview card */}
-        <div className="flex-1 flex items-center justify-center bg-gray-50 p-4">
+        {/* Right column - Preview card (40% wider) */}
+        <div
+          className="flex-1 flex items-center justify-center bg-gray-50 p-4"
+          style={{ minWidth: "490px" }}
+        >
           <div className="text-center">
             <div className="mx-auto size-32 bg-gray-200 rounded-full flex items-center justify-center mb-4">
               <svg
@@ -501,7 +516,7 @@ function ActionItem({
     <div
       className={`mb-2 p-3 rounded-md border transition-colors ${
         isDisabled
-          ? "bg-gray-100 border-gray-200 opacity-60"
+          ? "bg-gray-100 border-gray-200 opacity-75"
           : "bg-gray-50 border-gray-100 hover:border-green-200"
       }`}
     >
@@ -509,7 +524,7 @@ function ActionItem({
         <div
           className={`p-1.5 rounded-md ${
             isDisabled
-              ? "bg-gray-200 text-gray-500"
+              ? "bg-gray-200 text-gray-400"
               : "bg-green-100 text-green-700"
           }`}
         >
@@ -518,12 +533,12 @@ function ActionItem({
         <div className="flex-1">
           <div
             className={`font-medium text-sm capitalize ${
-              isDisabled ? "text-gray-500" : ""
+              isDisabled ? "text-gray-400" : ""
             }`}
           >
             {action.action.replace(/_/g, " ")}
             {isDisabled && (
-              <span className="ml-2 text-xs bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded">
+              <span className="ml-2 text-xs bg-gray-200 text-gray-400 px-1.5 py-0.5 rounded">
                 Following
               </span>
             )}
@@ -536,7 +551,8 @@ function ActionItem({
                 isDisabled ? "text-gray-400" : "text-gray-500"
               }`}
             >
-              <span>⏱️</span> Delay: {action.delay}ms
+              <span className={isDisabled ? "opacity-50" : ""}>⏱️</span> Delay:{" "}
+              {action.delay}ms
             </div>
           )}
 
@@ -547,7 +563,7 @@ function ActionItem({
                 <div
                   className={`truncate ${
                     isDisabled
-                      ? "text-gray-500"
+                      ? "text-gray-400"
                       : "text-blue-600 hover:text-blue-800"
                   } transition-colors`}
                 >
