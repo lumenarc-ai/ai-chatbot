@@ -112,6 +112,23 @@ function ActionPopup({
     Record<string, boolean>
   >({});
 
+  // State to track popup position for dragging
+  const [popupPosition, setPopupPosition] = useState(position);
+
+  // State to track if popup is maximized
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  // State to track dragging
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Update position when the initial position prop changes
+  useEffect(() => {
+    if (!isDragging) {
+      setPopupPosition(position);
+    }
+  }, [position, isDragging]);
+
   // Toggle collapse for a specific section
   const toggleSection = useCallback((nodeId: string) => {
     setCollapsedSections((prev) => ({
@@ -135,6 +152,60 @@ function ActionPopup({
     [nodeGroups]
   );
 
+  // Handle mouse down for dragging
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (isMaximized) return; // Don't allow dragging when maximized
+
+      // Only start drag if clicking on the header (not on buttons)
+      if ((e.target as HTMLElement).closest("button")) return;
+
+      setIsDragging(true);
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    },
+    [isMaximized]
+  );
+
+  // Handle mouse move for dragging
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      setPopupPosition({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y,
+      });
+    },
+    [isDragging, dragOffset]
+  );
+
+  // Handle mouse up to end dragging
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Add and remove event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  // Toggle maximize state
+  const toggleMaximize = useCallback(() => {
+    setIsMaximized((prev) => !prev);
+  }, []);
+
   // Determine if we should show actions grouped by node
   const showGrouped = nodeGroups && Object.keys(nodeGroups).length > 0;
 
@@ -148,17 +219,33 @@ function ActionPopup({
 
   return (
     <div
-      className="fixed z-50 bg-white rounded-lg shadow-lg border border-green-200 overflow-hidden action-popup"
-      style={{
-        left: position.x,
-        top: position.y,
-        width: "350px",
-        maxHeight: "500px",
-        transform: "translate(-50%, 0)",
-        marginTop: "0",
-      }}
+      className={`fixed z-50 bg-white rounded-lg shadow-lg border border-green-200 overflow-hidden action-popup ${
+        isMaximized ? "transition-all duration-300" : ""
+      }`}
+      style={
+        isMaximized
+          ? {
+              left: "50%",
+              top: "50%",
+              width: "90vw",
+              height: "90vh",
+              transform: "translate(-50%, -50%)",
+            }
+          : {
+              left: popupPosition.x,
+              top: popupPosition.y,
+              width: "700px", // Wider to accommodate two columns
+              maxHeight: "600px",
+              transform: "translate(-50%, 0)",
+              marginTop: "0",
+            }
+      }
     >
-      <div className="flex justify-between items-center bg-green-50 px-4 py-2 border-b border-green-200">
+      {/* Header - now with draggable functionality */}
+      <div
+        className="flex justify-between items-center bg-green-50 px-4 py-2 border-b border-green-200 cursor-move"
+        onMouseDown={handleMouseDown}
+      >
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-green-800">
             {showGrouped
@@ -261,62 +348,139 @@ function ActionPopup({
             </button>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 focus:outline-none"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Maximize/Restore button */}
+          <button
+            onClick={toggleMaximize}
+            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            title={isMaximized ? "Restore window" : "Maximize window"}
+          >
+            {isMaximized ? (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </button>
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+          >
+            ✕
+          </button>
+        </div>
       </div>
-      <div className="p-2 overflow-y-auto max-h-[450px]">
-        {showGrouped
-          ? // Render actions grouped by node
-            Object.entries(nodeGroups).map(
-              ([nodeId, { label, actions: nodeActions, isFollowing }]) => (
-                <div key={nodeId} className="mb-4">
-                  <div
-                    className={`font-medium text-sm mb-2 px-2 py-1 rounded-md flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-colors ${
-                      isFollowing && !followingActionsEnabled
-                        ? "text-gray-500 bg-gray-200"
-                        : "text-gray-700 bg-gray-100"
-                    }`}
-                    onClick={() => toggleSection(nodeId)}
-                  >
-                    <span className="flex items-center">
-                      <span className="mr-2 text-gray-500">
-                        {collapsedSections[nodeId] ? "▶" : "▼"}
-                      </span>
-                      {label}
-                      {isFollowing && (
-                        <span className="ml-2 text-xs bg-gray-300 text-gray-600 px-1.5 py-0.5 rounded">
-                          Following
+
+      {/* Two-column layout */}
+      <div
+        className="flex h-full"
+        style={{ height: isMaximized ? "calc(90vh - 40px)" : "560px" }}
+      >
+        {/* Left column - Actions list */}
+        <div className="w-[350px] p-2 overflow-y-auto border-r border-gray-200">
+          {showGrouped
+            ? // Render actions grouped by node
+              Object.entries(nodeGroups).map(
+                ([nodeId, { label, actions: nodeActions, isFollowing }]) => (
+                  <div key={nodeId} className="mb-4">
+                    <div
+                      className={`font-medium text-sm mb-2 px-2 py-1 rounded-md flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-colors ${
+                        isFollowing && !followingActionsEnabled
+                          ? "text-gray-500 bg-gray-200"
+                          : "text-gray-700 bg-gray-100"
+                      }`}
+                      onClick={() => toggleSection(nodeId)}
+                    >
+                      <span className="flex items-center">
+                        <span className="mr-2 text-gray-500">
+                          {collapsedSections[nodeId] ? "▶" : "▼"}
                         </span>
-                      )}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {nodeActions.length} action
-                      {nodeActions.length !== 1 ? "s" : ""}
-                    </span>
+                        {label}
+                        {isFollowing && (
+                          <span className="ml-2 text-xs bg-gray-300 text-gray-600 px-1.5 py-0.5 rounded">
+                            Following
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {nodeActions.length} action
+                        {nodeActions.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    {!collapsedSections[nodeId] &&
+                      nodeActions.map((action, index) => (
+                        <ActionItem
+                          key={`${nodeId}-${index}`}
+                          action={action}
+                          followingActionsEnabled={followingActionsEnabled}
+                        />
+                      ))}
                   </div>
-                  {!collapsedSections[nodeId] &&
-                    nodeActions.map((action, index) => (
-                      <ActionItem
-                        key={`${nodeId}-${index}`}
-                        action={action}
-                        followingActionsEnabled={followingActionsEnabled}
-                      />
-                    ))}
-                </div>
+                )
               )
-            )
-          : // Render actions without grouping
-            actions.map((action, index) => (
-              <ActionItem
-                key={index}
-                action={action}
-                followingActionsEnabled={followingActionsEnabled}
-              />
-            ))}
+            : // Render actions without grouping
+              actions.map((action, index) => (
+                <ActionItem
+                  key={index}
+                  action={action}
+                  followingActionsEnabled={followingActionsEnabled}
+                />
+              ))}
+        </div>
+
+        {/* Right column - Preview card */}
+        <div className="flex-1 flex items-center justify-center bg-gray-50 p-4">
+          <div className="text-center">
+            <div className="mx-auto size-32 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+              <svg
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  stroke="#666"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <p className="text-gray-500 text-sm">
+              Video preview will appear here when actions are played
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
