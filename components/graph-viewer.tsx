@@ -89,7 +89,13 @@ interface ActionPopupProps {
   actions: any[];
   position: { x: number; y: number };
   onClose: () => void;
-  nodeGroups?: Record<string, { label: string; actions: any[] }>;
+  nodeGroups?: Record<
+    string,
+    { label: string; actions: any[]; isFollowing?: boolean }
+  >;
+  showFastForward?: boolean;
+  onFastForward?: () => void;
+  followingActionsEnabled?: boolean;
 }
 
 function ActionPopup({
@@ -97,11 +103,48 @@ function ActionPopup({
   position,
   onClose,
   nodeGroups,
+  showFastForward,
+  onFastForward,
+  followingActionsEnabled,
 }: ActionPopupProps) {
-  if (!actions || actions.length === 0) return null;
+  // State to track collapsed sections
+  const [collapsedSections, setCollapsedSections] = useState<
+    Record<string, boolean>
+  >({});
+
+  // Toggle collapse for a specific section
+  const toggleSection = useCallback((nodeId: string) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [nodeId]: !prev[nodeId],
+    }));
+  }, []);
+
+  // Toggle all sections at once
+  const toggleAllSections = useCallback(
+    (collapsed: boolean) => {
+      if (!nodeGroups) return;
+
+      const newState: Record<string, boolean> = {};
+      Object.keys(nodeGroups).forEach((nodeId) => {
+        newState[nodeId] = collapsed;
+      });
+
+      setCollapsedSections(newState);
+    },
+    [nodeGroups]
+  );
 
   // Determine if we should show actions grouped by node
   const showGrouped = nodeGroups && Object.keys(nodeGroups).length > 0;
+
+  // Check if all sections are collapsed
+  const allCollapsed =
+    showGrouped &&
+    Object.keys(nodeGroups || {}).length > 0 &&
+    Object.keys(nodeGroups || {}).every((nodeId) => collapsedSections[nodeId]);
+
+  if (!actions || actions.length === 0) return null;
 
   return (
     <div
@@ -144,6 +187,79 @@ function ActionPopup({
               </svg>
             </div>
           </button>
+
+          {/* Fast forward button - only show when there's a single selected node with following nodes */}
+          {showFastForward && (
+            <button
+              className={`${
+                followingActionsEnabled
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-blue-500 hover:bg-blue-600"
+              } text-white rounded-full size-6 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 ml-1`}
+              title={
+                followingActionsEnabled
+                  ? "Following actions enabled"
+                  : "Enable following actions"
+              }
+              onClick={onFastForward}
+            >
+              <div className="flex items-center justify-center">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M2 2.5L8 8L2 13.5V2.5Z" fill="currentColor" />
+                  <path d="M9 2.5L15 8L9 13.5V2.5Z" fill="currentColor" />
+                </svg>
+              </div>
+            </button>
+          )}
+
+          {/* Collapse/Expand all button - only show when there are multiple node groups */}
+          {showGrouped && Object.keys(nodeGroups || {}).length > 1 && (
+            <button
+              className="text-gray-600 hover:text-gray-800 rounded-full size-6 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 ml-1"
+              title={
+                allCollapsed ? "Expand all sections" : "Collapse all sections"
+              }
+              onClick={() => toggleAllSections(!allCollapsed)}
+            >
+              <div className="flex items-center justify-center">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  {allCollapsed ? (
+                    <>
+                      {/* Expand icon */}
+                      <path
+                        d="M4 9h16M4 15h16"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      {/* Collapse icon */}
+                      <path
+                        d="M4 6h16M4 12h16M4 18h16"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </>
+                  )}
+                </svg>
+              </div>
+            </button>
+          )}
         </div>
         <button
           onClick={onClose}
@@ -156,24 +272,50 @@ function ActionPopup({
         {showGrouped
           ? // Render actions grouped by node
             Object.entries(nodeGroups).map(
-              ([nodeId, { label, actions: nodeActions }]) => (
+              ([nodeId, { label, actions: nodeActions, isFollowing }]) => (
                 <div key={nodeId} className="mb-4">
-                  <div className="font-medium text-sm text-gray-700 mb-2 px-2 py-1 bg-gray-100 rounded-md flex items-center justify-between">
-                    <span>{label}</span>
+                  <div
+                    className={`font-medium text-sm mb-2 px-2 py-1 rounded-md flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-colors ${
+                      isFollowing && !followingActionsEnabled
+                        ? "text-gray-500 bg-gray-200"
+                        : "text-gray-700 bg-gray-100"
+                    }`}
+                    onClick={() => toggleSection(nodeId)}
+                  >
+                    <span className="flex items-center">
+                      <span className="mr-2 text-gray-500">
+                        {collapsedSections[nodeId] ? "▶" : "▼"}
+                      </span>
+                      {label}
+                      {isFollowing && (
+                        <span className="ml-2 text-xs bg-gray-300 text-gray-600 px-1.5 py-0.5 rounded">
+                          Following
+                        </span>
+                      )}
+                    </span>
                     <span className="text-xs text-gray-500">
                       {nodeActions.length} action
                       {nodeActions.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  {nodeActions.map((action, index) => (
-                    <ActionItem key={`${nodeId}-${index}`} action={action} />
-                  ))}
+                  {!collapsedSections[nodeId] &&
+                    nodeActions.map((action, index) => (
+                      <ActionItem
+                        key={`${nodeId}-${index}`}
+                        action={action}
+                        followingActionsEnabled={followingActionsEnabled}
+                      />
+                    ))}
                 </div>
               )
             )
           : // Render actions without grouping
             actions.map((action, index) => (
-              <ActionItem key={index} action={action} />
+              <ActionItem
+                key={index}
+                action={action}
+                followingActionsEnabled={followingActionsEnabled}
+              />
             ))}
       </div>
     </div>
@@ -181,21 +323,55 @@ function ActionPopup({
 }
 
 // Extracted action item component for reuse
-function ActionItem({ action }: { action: any }) {
+function ActionItem({
+  action,
+  followingActionsEnabled,
+}: {
+  action: any;
+  followingActionsEnabled?: boolean;
+}) {
+  // Check if this is a following action that should be disabled
+  const isDisabled = action.isFollowing && !followingActionsEnabled;
+
   return (
-    <div className="mb-2 p-3 bg-gray-50 rounded-md border border-gray-100 hover:border-green-200 transition-colors">
+    <div
+      className={`mb-2 p-3 rounded-md border transition-colors ${
+        isDisabled
+          ? "bg-gray-100 border-gray-200 opacity-60"
+          : "bg-gray-50 border-gray-100 hover:border-green-200"
+      }`}
+    >
       <div className="flex items-start gap-3">
-        <div className="bg-green-100 text-green-700 p-1.5 rounded-md">
+        <div
+          className={`p-1.5 rounded-md ${
+            isDisabled
+              ? "bg-gray-200 text-gray-500"
+              : "bg-green-100 text-green-700"
+          }`}
+        >
           {getActionIcon(action.action)}
         </div>
         <div className="flex-1">
-          <div className="font-medium text-sm capitalize">
+          <div
+            className={`font-medium text-sm capitalize ${
+              isDisabled ? "text-gray-500" : ""
+            }`}
+          >
             {action.action.replace(/_/g, " ")}
+            {isDisabled && (
+              <span className="ml-2 text-xs bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded">
+                Following
+              </span>
+            )}
           </div>
 
           {/* Show delay if present */}
           {action.delay > 0 && (
-            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+            <div
+              className={`text-xs mt-1 flex items-center gap-1 ${
+                isDisabled ? "text-gray-400" : "text-gray-500"
+              }`}
+            >
               <span>⏱️</span> Delay: {action.delay}ms
             </div>
           )}
@@ -204,13 +380,19 @@ function ActionItem({ action }: { action: any }) {
           {action.target && (
             <div className="mt-2 text-xs">
               {action.target.value && (
-                <div className="text-blue-600 truncate hover:text-blue-800 transition-colors">
+                <div
+                  className={`truncate ${
+                    isDisabled
+                      ? "text-gray-500"
+                      : "text-blue-600 hover:text-blue-800"
+                  } transition-colors`}
+                >
                   {action.target.value.startsWith("http") ? (
                     <a
                       href={action.target.value}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:underline"
+                      className={isDisabled ? "" : "hover:underline"}
                     >
                       {action.target.value}
                     </a>
@@ -220,7 +402,13 @@ function ActionItem({ action }: { action: any }) {
                 </div>
               )}
               {action.target.selector && (
-                <div className="text-gray-500 mt-1 font-mono text-[10px] bg-gray-100 p-1 rounded overflow-x-auto">
+                <div
+                  className={`mt-1 font-mono text-[10px] p-1 rounded overflow-x-auto ${
+                    isDisabled
+                      ? "bg-gray-200 text-gray-400"
+                      : "bg-gray-100 text-gray-500"
+                  }`}
+                >
                   {action.target.selector}
                 </div>
               )}
@@ -287,7 +475,11 @@ export function GraphViewer({ data }: GraphViewerProps) {
     visible: boolean;
     actions: any[];
     position: { x: number; y: number };
-    nodeGroups?: Record<string, { label: string; actions: any[] }>;
+    nodeGroups?: Record<
+      string,
+      { label: string; actions: any[]; isFollowing?: boolean }
+    >;
+    showFastForward?: boolean;
   }>({
     visible: false,
     actions: [],
@@ -737,44 +929,133 @@ export function GraphViewer({ data }: GraphViewerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Function to collect actions from all selected nodes
-  const getActionsFromSelectedNodes = useCallback(() => {
-    if (selectedNodes.length === 0) return { actions: [], nodeGroups: {} };
+  // Function to find all following nodes from a given node
+  const findFollowingNodes = useCallback(
+    (startNodeId: string) => {
+      // Create a map of nodes by ID for quick lookup
+      const nodeMap = new Map(nodes.map((node) => [node.id, node]));
 
-    // Create a map to group actions by node
-    const nodeGroups: Record<string, { label: string; actions: any[] }> = {};
+      // Create a set to track visited nodes to avoid cycles
+      const visited = new Set<string>();
 
-    // Collect actions from each selected node
-    selectedNodes.forEach((node) => {
-      const nodeData = node.data || {};
-      const nodeLabel = (nodeData.label as string) || node.id;
-      const actions = (nodeData.actions || []) as any[];
+      // Create a map to store following nodes and their depth
+      const followingNodes: Node[] = [];
 
-      if (actions.length > 0) {
-        nodeGroups[node.id] = {
-          label: nodeLabel,
-          actions: actions,
-        };
+      // Queue for BFS traversal
+      const queue: { nodeId: string; depth: number }[] = [
+        { nodeId: startNodeId, depth: 0 },
+      ];
+
+      while (queue.length > 0) {
+        const { nodeId, depth } = queue.shift()!;
+
+        // Skip the start node and already visited nodes
+        if (depth === 0 || visited.has(nodeId)) {
+          if (depth === 0) {
+            visited.add(nodeId);
+          }
+
+          // Find all edges where this node is the source
+          const outgoingEdges = edges.filter((edge) => edge.source === nodeId);
+
+          // Add target nodes to the queue
+          outgoingEdges.forEach((edge) => {
+            const targetId = edge.target;
+            if (!visited.has(targetId)) {
+              visited.add(targetId);
+              const targetNode = nodeMap.get(targetId);
+              if (targetNode) {
+                followingNodes.push(targetNode);
+                queue.push({ nodeId: targetId, depth: depth + 1 });
+              }
+            }
+          });
+        }
       }
-    });
 
-    // Flatten all actions for the actions array
-    const allActions = selectedNodes.flatMap((node) => {
-      const actions = ((node.data || {}).actions || []) as any[];
-      return actions;
-    });
+      return followingNodes;
+    },
+    [nodes, edges]
+  );
 
-    return { actions: allActions, nodeGroups };
-  }, [selectedNodes]);
+  // Function to collect actions from all selected nodes
+  const getActionsFromSelectedNodes = useCallback(
+    (includeFollowing = false) => {
+      if (selectedNodes.length === 0) return { actions: [], nodeGroups: {} };
+
+      // Create a map to group actions by node
+      const nodeGroups: Record<
+        string,
+        { label: string; actions: any[]; isFollowing?: boolean }
+      > = {};
+
+      // Collect actions from each selected node
+      selectedNodes.forEach((node) => {
+        const nodeData = node.data || {};
+        const nodeLabel = (nodeData.label as string) || node.id;
+        const actions = (nodeData.actions || []) as any[];
+
+        if (actions.length > 0) {
+          nodeGroups[node.id] = {
+            label: nodeLabel,
+            actions: actions,
+          };
+        }
+      });
+
+      // If we have a single selected node and includeFollowing is true, add following nodes
+      if (selectedNodes.length === 1 && includeFollowing) {
+        const startNode = selectedNodes[0];
+        const followingNodes = findFollowingNodes(startNode.id);
+
+        // Add actions from following nodes
+        followingNodes.forEach((node) => {
+          const nodeData = node.data || {};
+          const nodeLabel = (nodeData.label as string) || node.id;
+          const actions = (nodeData.actions || []) as any[];
+
+          if (actions.length > 0) {
+            nodeGroups[node.id] = {
+              label: nodeLabel,
+              actions: actions,
+              isFollowing: true, // Mark as a following node
+            };
+          }
+        });
+      }
+
+      // Flatten all actions for the actions array
+      const allActions = Object.entries(nodeGroups).flatMap(
+        ([_, { actions, isFollowing }]) => {
+          // If the node is a following node, mark each action
+          if (isFollowing) {
+            return actions.map((action) => ({ ...action, isFollowing: true }));
+          }
+          return actions;
+        }
+      );
+
+      return { actions: allActions, nodeGroups };
+    },
+    [selectedNodes, findFollowingNodes]
+  );
+
+  // State to track if following actions are enabled
+  const [followingActionsEnabled, setFollowingActionsEnabled] = useState(false);
 
   // Handle play button click
   const handlePlayButtonClick = useCallback(
     (event: React.MouseEvent) => {
-      const result = getActionsFromSelectedNodes();
+      // Include following nodes if there's only one selected node
+      const includeFollowing = selectedNodes.length === 1;
+      const result = getActionsFromSelectedNodes(includeFollowing);
       const actions = result.actions;
       const nodeGroups = result.nodeGroups;
 
       if (actions.length > 0) {
+        // Reset the following actions state
+        setFollowingActionsEnabled(false);
+
         // Show the action popup below the play button
         const buttonRect = (
           event.currentTarget as HTMLElement
@@ -787,10 +1068,13 @@ export function GraphViewer({ data }: GraphViewerProps) {
             x: buttonRect.left + buttonRect.width / 2,
             y: buttonRect.bottom + 10,
           },
+          showFastForward:
+            includeFollowing &&
+            Object.values(nodeGroups).some((group) => group.isFollowing),
         });
       }
     },
-    [getActionsFromSelectedNodes]
+    [getActionsFromSelectedNodes, selectedNodes]
   );
 
   return (
@@ -804,6 +1088,9 @@ export function GraphViewer({ data }: GraphViewerProps) {
           actions={actionPopup.actions}
           position={actionPopup.position}
           nodeGroups={actionPopup.nodeGroups}
+          showFastForward={actionPopup.showFastForward}
+          followingActionsEnabled={followingActionsEnabled}
+          onFastForward={() => setFollowingActionsEnabled(true)}
           onClose={() =>
             setActionPopup((prev) => ({ ...prev, visible: false }))
           }
