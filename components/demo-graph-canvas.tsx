@@ -63,8 +63,8 @@ export function DemoGraphCanvas({
   }, []);
 
   // Extract title and description from the graph data
-  const title = graphData.title || "Demo Graph";
-  const description = graphData.description || "Graph visualization";
+  const title = graphData.title || "Response IQ";
+  const description = graphData.description || "Demo graph | v0.1 | 2025-05-11";
   const visualizationType = graphData.visualizationType || "graph";
   const data = graphData.data || {};
 

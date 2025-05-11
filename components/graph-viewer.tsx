@@ -1,14 +1,12 @@
 "use client";
 
-import { useMemo, useEffect, useCallback } from "react";
+import { useMemo, useEffect, useCallback, useState } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   useNodesState,
   useEdgesState,
-  Node,
-  Edge,
   MarkerType,
   addEdge,
   Handle,
@@ -16,6 +14,7 @@ import {
   Panel,
   ConnectionLineType,
 } from "@xyflow/react";
+import type { Node, Edge } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { LockIcon } from "./icons";
 import dagre from "@dagrejs/dagre";
@@ -32,7 +31,7 @@ const NODE_SPACING_Y = 100; // Increased vertical spacing to prevent overlap
 const getLayoutedElements = (
   nodes: Node[],
   edges: Edge[],
-  direction = "TB"
+  direction = "LR" // Changed default to horizontal layout (LR)
 ) => {
   const isHorizontal = direction === "LR";
   const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
@@ -85,7 +84,219 @@ interface GraphViewerProps {
   data: any;
 }
 
+// Action Popup Component
+interface ActionPopupProps {
+  actions: any[];
+  position: { x: number; y: number };
+  onClose: () => void;
+  nodeGroups?: Record<string, { label: string; actions: any[] }>;
+}
+
+function ActionPopup({
+  actions,
+  position,
+  onClose,
+  nodeGroups,
+}: ActionPopupProps) {
+  if (!actions || actions.length === 0) return null;
+
+  // Determine if we should show actions grouped by node
+  const showGrouped = nodeGroups && Object.keys(nodeGroups).length > 0;
+
+  return (
+    <div
+      className="fixed z-50 bg-white rounded-lg shadow-lg border border-green-200 overflow-hidden action-popup"
+      style={{
+        left: position.x,
+        top: position.y,
+        width: "350px",
+        maxHeight: "500px",
+        transform: "translate(-50%, 0)",
+        marginTop: "0",
+      }}
+    >
+      <div className="flex justify-between items-center bg-green-50 px-4 py-2 border-b border-green-200">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-green-800">
+            {showGrouped
+              ? `Actions from ${Object.keys(nodeGroups).length} node${
+                  Object.keys(nodeGroups).length > 1 ? "s" : ""
+                }`
+              : "Actions"}
+          </h3>
+          <button
+            className="bg-green-600 hover:bg-green-700 text-white rounded-full size-6 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-1"
+            title="Play all actions"
+            onClick={() => console.log("Play actions clicked")}
+          >
+            <div
+              className="flex items-center justify-center"
+              style={{ marginLeft: "1px" }}
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 16 16"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M3 2.5L13 8L3 13.5V2.5Z" fill="currentColor" />
+              </svg>
+            </div>
+          </button>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700 focus:outline-none"
+        >
+          ✕
+        </button>
+      </div>
+      <div className="p-2 overflow-y-auto max-h-[450px]">
+        {showGrouped
+          ? // Render actions grouped by node
+            Object.entries(nodeGroups).map(
+              ([nodeId, { label, actions: nodeActions }]) => (
+                <div key={nodeId} className="mb-4">
+                  <div className="font-medium text-sm text-gray-700 mb-2 px-2 py-1 bg-gray-100 rounded-md flex items-center justify-between">
+                    <span>{label}</span>
+                    <span className="text-xs text-gray-500">
+                      {nodeActions.length} action
+                      {nodeActions.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  {nodeActions.map((action, index) => (
+                    <ActionItem key={`${nodeId}-${index}`} action={action} />
+                  ))}
+                </div>
+              )
+            )
+          : // Render actions without grouping
+            actions.map((action, index) => (
+              <ActionItem key={index} action={action} />
+            ))}
+      </div>
+    </div>
+  );
+}
+
+// Extracted action item component for reuse
+function ActionItem({ action }: { action: any }) {
+  return (
+    <div className="mb-2 p-3 bg-gray-50 rounded-md border border-gray-100 hover:border-green-200 transition-colors">
+      <div className="flex items-start gap-3">
+        <div className="bg-green-100 text-green-700 p-1.5 rounded-md">
+          {getActionIcon(action.action)}
+        </div>
+        <div className="flex-1">
+          <div className="font-medium text-sm capitalize">
+            {action.action.replace(/_/g, " ")}
+          </div>
+
+          {/* Show delay if present */}
+          {action.delay > 0 && (
+            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+              <span>⏱️</span> Delay: {action.delay}ms
+            </div>
+          )}
+
+          {/* Show target details */}
+          {action.target && (
+            <div className="mt-2 text-xs">
+              {action.target.value && (
+                <div className="text-blue-600 truncate hover:text-blue-800 transition-colors">
+                  {action.target.value.startsWith("http") ? (
+                    <a
+                      href={action.target.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline"
+                    >
+                      {action.target.value}
+                    </a>
+                  ) : (
+                    action.target.value
+                  )}
+                </div>
+              )}
+              {action.target.selector && (
+                <div className="text-gray-500 mt-1 font-mono text-[10px] bg-gray-100 p-1 rounded overflow-x-auto">
+                  {action.target.selector}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Helper function to get an icon for the action type
+function getActionIcon(type: string) {
+  switch (type?.toLowerCase()) {
+    case "go_to":
+    case "navigate":
+    case "redirect":
+      return "🔗"; // Link icon for navigation actions
+
+    case "scroll_to_section":
+    case "scroll":
+      return "⬇️"; // Down arrow for scrolling actions
+
+    case "click":
+      return "👆"; // Pointing finger for click actions
+
+    case "input":
+    case "type":
+    case "fill":
+      return "⌨️"; // Keyboard for input actions
+
+    case "submit":
+    case "form_submit":
+      return "📤"; // Outbox for submit actions
+
+    case "wait":
+    case "delay":
+      return "⏱️"; // Timer for wait/delay actions
+
+    case "api":
+    case "request":
+    case "fetch":
+      return "🔄"; // Refresh icon for API/request actions
+
+    case "validate":
+    case "check":
+      return "✅"; // Checkmark for validation actions
+
+    case "select":
+    case "choose":
+      return "📋"; // Clipboard for selection actions
+
+    case "hover":
+      return "👉"; // Pointing right for hover actions
+
+    default:
+      return "⚡"; // Lightning bolt for other actions
+  }
+}
+
 export function GraphViewer({ data }: GraphViewerProps) {
+  // State for action popup
+  const [actionPopup, setActionPopup] = useState<{
+    visible: boolean;
+    actions: any[];
+    position: { x: number; y: number };
+    nodeGroups?: Record<string, { label: string; actions: any[] }>;
+  }>({
+    visible: false,
+    actions: [],
+    position: { x: 0, y: 0 },
+  });
+
+  // State to track selected nodes
+  const [selectedNodes, setSelectedNodes] = useState<Node[]>([]);
+
   // Debug log to help diagnose issues
   useEffect(() => {
     console.log("GraphViewer data:", data);
@@ -93,6 +304,28 @@ export function GraphViewer({ data }: GraphViewerProps) {
       console.log(`Found ${data.edges.length} edges in the data`);
     }
   }, [data]);
+
+  // Add a click handler to close the popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (actionPopup.visible) {
+        // Check if the click was outside the popup
+        const popupElement = document.querySelector(".action-popup");
+        const target = event.target as Element;
+        if (popupElement && target && !popupElement.contains(target)) {
+          setActionPopup((prev) => ({ ...prev, visible: false }));
+        }
+      }
+    };
+
+    // Add the event listener
+    document.addEventListener("mousedown", handleClickOutside);
+
+    // Clean up
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [actionPopup.visible]);
 
   // Convert the graph data to React Flow format
   const initialNodes: Node[] = useMemo(() => {
@@ -413,30 +646,71 @@ export function GraphViewer({ data }: GraphViewerProps) {
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     console.log("Node clicked:", node);
 
-    // Example of updating a node when clicked
+    // Close any open action popup
+    setActionPopup((prev) => ({ ...prev, visible: false }));
+
+    // Toggle selection state of the clicked node
     setNodes((nds) =>
       nds.map((n) => {
         if (n.id === node.id) {
           // Toggle a highlighted state on the clicked node
+          const newIsSelected = !n.data?.isSelected;
           return {
             ...n,
             style: {
               ...n.style,
-              borderWidth: n.style?.borderWidth === 3 ? 1 : 3,
-              borderColor:
-                n.style?.borderColor === "#22c55e" ? "#ddd" : "#22c55e",
+              borderWidth: newIsSelected ? 3 : 1,
+              borderColor: newIsSelected ? "#22c55e" : "#ddd",
             },
             data: {
               ...n.data,
-              isSelected: !n.data?.isSelected,
+              isSelected: newIsSelected,
             },
           };
         }
         return n;
       })
     );
+
+    // Update the selectedNodes array
+    setSelectedNodes((prev) => {
+      const isCurrentlySelected = node.data?.isSelected;
+      if (isCurrentlySelected) {
+        // If it was selected, remove it
+        return prev.filter((n) => n.id !== node.id);
+      } else {
+        // If it wasn't selected, add it
+        return [...prev, node];
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Handle edge click events
+  const onEdgeClick = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      console.log("Edge clicked:", edge);
+
+      // Find the source node to get its actions
+      const sourceNode = data?.nodes?.find(
+        (node: any) => node.id === edge.source
+      );
+      const actions = sourceNode?.actions || [];
+
+      if (actions.length > 0) {
+        // Show the action popup at the click position
+        setActionPopup({
+          visible: true,
+          actions,
+          position: { x: event.clientX, y: event.clientY },
+        });
+      } else {
+        // If no actions, close any open popup
+        setActionPopup((prev) => ({ ...prev, visible: false }));
+      }
+    },
+    [data?.nodes]
+  );
 
   // Add a connection handler to allow users to create new connections
   const onConnect = useCallback((params: any) => {
@@ -463,11 +737,79 @@ export function GraphViewer({ data }: GraphViewerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Function to collect actions from all selected nodes
+  const getActionsFromSelectedNodes = useCallback(() => {
+    if (selectedNodes.length === 0) return { actions: [], nodeGroups: {} };
+
+    // Create a map to group actions by node
+    const nodeGroups: Record<string, { label: string; actions: any[] }> = {};
+
+    // Collect actions from each selected node
+    selectedNodes.forEach((node) => {
+      const nodeData = node.data || {};
+      const nodeLabel = (nodeData.label as string) || node.id;
+      const actions = (nodeData.actions || []) as any[];
+
+      if (actions.length > 0) {
+        nodeGroups[node.id] = {
+          label: nodeLabel,
+          actions: actions,
+        };
+      }
+    });
+
+    // Flatten all actions for the actions array
+    const allActions = selectedNodes.flatMap((node) => {
+      const actions = ((node.data || {}).actions || []) as any[];
+      return actions;
+    });
+
+    return { actions: allActions, nodeGroups };
+  }, [selectedNodes]);
+
+  // Handle play button click
+  const handlePlayButtonClick = useCallback(
+    (event: React.MouseEvent) => {
+      const result = getActionsFromSelectedNodes();
+      const actions = result.actions;
+      const nodeGroups = result.nodeGroups;
+
+      if (actions.length > 0) {
+        // Show the action popup below the play button
+        const buttonRect = (
+          event.currentTarget as HTMLElement
+        ).getBoundingClientRect();
+        setActionPopup({
+          visible: true,
+          actions,
+          nodeGroups,
+          position: {
+            x: buttonRect.left + buttonRect.width / 2,
+            y: buttonRect.bottom + 10,
+          },
+        });
+      }
+    },
+    [getActionsFromSelectedNodes]
+  );
+
   return (
     <div
       style={{ width: "100%", height: "700px" }} // Increased height for better graph display
       className="bg-white rounded-lg border border-green-200"
     >
+      {/* Render the action popup if visible */}
+      {actionPopup.visible && (
+        <ActionPopup
+          actions={actionPopup.actions}
+          position={actionPopup.position}
+          nodeGroups={actionPopup.nodeGroups}
+          onClose={() =>
+            setActionPopup((prev) => ({ ...prev, visible: false }))
+          }
+        />
+      )}
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -475,12 +817,18 @@ export function GraphViewer({ data }: GraphViewerProps) {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
-        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-        minZoom={0.5}
-        maxZoom={2}
+        fitViewOptions={{
+          padding: 0.1, // Reduced padding to show more of the graph
+          includeHiddenNodes: true,
+          minZoom: 0.6, // Set minimum zoom for fit view
+          maxZoom: 1.2, // Set maximum zoom for fit view
+        }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }} // Decreased default zoom to show more nodes
+        minZoom={0.3} // Lower minimum zoom to allow seeing more of the graph
+        maxZoom={3} // Higher maximum zoom for detailed inspection
         attributionPosition="bottom-left"
         proOptions={{ hideAttribution: true }}
         className="bg-green-50"
@@ -496,6 +844,33 @@ export function GraphViewer({ data }: GraphViewerProps) {
           },
         }}
       >
+        {/* Play button for selected nodes */}
+        {selectedNodes.length > 0 && (
+          <Panel position="top-left" className="p-2">
+            <button
+              className="bg-green-600 hover:bg-green-700 text-white rounded-full size-10 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-1"
+              title={`Play actions from ${selectedNodes.length} selected node${
+                selectedNodes.length > 1 ? "s" : ""
+              }`}
+              onClick={handlePlayButtonClick}
+            >
+              <div
+                className="flex items-center justify-center"
+                style={{ marginLeft: "2px" }}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M3 2.5L13 8L3 13.5V2.5Z" fill="currentColor" />
+                </svg>
+              </div>
+            </button>
+          </Panel>
+        )}
         <Panel position="top-right" className="p-2">
           <div className="flex gap-2">
             <button
@@ -505,7 +880,7 @@ export function GraphViewer({ data }: GraphViewerProps) {
               Vertical Layout
             </button>
             <button
-              className="bg-white px-3 py-1 text-sm rounded border border-green-300 hover:bg-green-50"
+              className="bg-green-50 px-3 py-1 text-sm rounded border border-green-500 hover:bg-green-100 font-medium"
               onClick={() => onLayout("LR")}
             >
               Horizontal Layout
@@ -589,11 +964,13 @@ function CustomNode({ data, id }: { data: any; id: string }) {
 
   // Define handle styles
   const handleStyle = {
-    width: 10,
-    height: 10,
-    border: "1px solid #88be9c",
+    width: 12,
+    height: 12,
+    border: "2px solid #88be9c",
     background: "#f0f9f4",
     borderRadius: "50%",
+    zIndex: 10,
+    boxShadow: "0 0 3px rgba(0, 0, 0, 0.2)",
   };
 
   return (
@@ -687,7 +1064,8 @@ function CustomNode({ data, id }: { data: any; id: string }) {
             id="a"
             style={{
               ...handleStyle,
-              top: "25%",
+              top: "30%",
+              right: -6,
             }}
           />
 
@@ -698,7 +1076,8 @@ function CustomNode({ data, id }: { data: any; id: string }) {
             id="b"
             style={{
               ...handleStyle,
-              top: "75%",
+              top: "70%",
+              right: -6,
             }}
           />
 
@@ -708,6 +1087,8 @@ function CustomNode({ data, id }: { data: any; id: string }) {
             position={Position.Left}
             style={{
               ...handleStyle,
+              left: -6,
+              top: "50%",
             }}
           />
         </>
