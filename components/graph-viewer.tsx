@@ -13,9 +13,73 @@ import {
   addEdge,
   Handle,
   Position,
+  Panel,
+  ConnectionLineType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { LockIcon } from "./icons";
+import dagre from "@dagrejs/dagre";
+
+// Node dimensions for layout calculations - should match the actual rendered size
+const NODE_WIDTH = 200; // Increased to account for padding and content
+const NODE_HEIGHT = 150; // Increased to account for all content and handles
+
+// Spacing between nodes to prevent overlap
+const NODE_SPACING_X = 150; // Increased horizontal spacing to prevent overlap
+const NODE_SPACING_Y = 100; // Increased vertical spacing to prevent overlap
+
+// Helper function to calculate layout using dagre
+const getLayoutedElements = (
+  nodes: Node[],
+  edges: Edge[],
+  direction = "TB"
+) => {
+  const isHorizontal = direction === "LR";
+  const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+
+  // Configure the layout algorithm with spacing parameters
+  dagreGraph.setGraph({
+    rankdir: direction,
+    nodesep: NODE_SPACING_X, // Horizontal spacing between nodes
+    ranksep: NODE_SPACING_Y, // Vertical spacing between nodes
+    edgesep: 50, // Spacing between edges
+    marginx: 20, // Margin on the x-axis
+    marginy: 20, // Margin on the y-axis
+  });
+
+  // Set nodes in the dagre graph
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+  });
+
+  // Set edges in the dagre graph
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  // Calculate the layout
+  dagre.layout(dagreGraph);
+
+  // Apply the layout to the nodes
+  const layoutedNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+
+    return {
+      ...node,
+      targetPosition: isHorizontal ? Position.Left : Position.Top,
+      sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+      // We are shifting the dagre node position (anchor=center center) to the top left
+      // so it matches the React Flow node anchor point (top left).
+      // Adding a padding factor to further prevent overlap
+      position: {
+        x: nodeWithPosition.x - NODE_WIDTH / 2,
+        y: nodeWithPosition.y - NODE_HEIGHT / 2,
+      },
+    };
+  });
+
+  return { nodes: layoutedNodes, edges };
+};
 
 interface GraphViewerProps {
   data: any;
@@ -307,8 +371,17 @@ export function GraphViewer({ data }: GraphViewerProps) {
     return [];
   }, [data]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // Apply initial layout to nodes
+  const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
+    if (initialNodes.length === 0)
+      return { nodes: initialNodes, edges: initialEdges };
+
+    // Apply the dagre layout to the initial nodes and edges
+    return getLayoutedElements(initialNodes, initialEdges);
+  }, [initialNodes, initialEdges]);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
 
   // Custom node component
   const nodeTypes = useMemo(
@@ -324,28 +397,17 @@ export function GraphViewer({ data }: GraphViewerProps) {
     console.log("Final edges:", edges);
   }, [nodes, edges]);
 
-  // Update node positions after initial layout
-  useEffect(() => {
-    setNodes(nodes);
-    setEdges(edges);
-    // if (nodes.length > 0) {
-    //   // After initial render, update node positions to improve layout
-    //   setTimeout(() => {
-    //     setNodes((nds) =>
-    //       nds.map((node) => ({
-    //         ...node,
-    //         // Add any node-specific updates here if needed
-    //         data: {
-    //           ...node.data,
-    //           // You can update node data here if needed
-    //         },
-    //       }))
-    //     );
-    //     console.log("Nodes updated with setNodes");
-    //   }, 100);
-    // }
-    // // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Function to apply layout in different directions
+  const onLayout = useCallback(
+    (direction: "TB" | "LR") => {
+      const { nodes: layoutedNodes, edges: layoutedEdges } =
+        getLayoutedElements(nodes, edges, direction);
+
+      setNodes([...layoutedNodes]);
+      setEdges([...layoutedEdges]);
+    },
+    [nodes, edges, setNodes, setEdges]
+  );
 
   // Handle node click events
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -403,7 +465,7 @@ export function GraphViewer({ data }: GraphViewerProps) {
 
   return (
     <div
-      style={{ width: "100%", height: "500px" }}
+      style={{ width: "100%", height: "700px" }} // Increased height for better graph display
       className="bg-white rounded-lg border border-green-200"
     >
       <ReactFlow
@@ -423,15 +485,33 @@ export function GraphViewer({ data }: GraphViewerProps) {
         proOptions={{ hideAttribution: true }}
         className="bg-green-50"
         connectionLineStyle={{ stroke: "#88be9c", strokeWidth: 2 }}
+        connectionLineType={ConnectionLineType.SmoothStep}
         defaultEdgeOptions={{
           style: { stroke: "#88be9c", strokeWidth: 2 },
           type: "default",
+          animated: true,
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: "#88be9c",
           },
         }}
       >
+        <Panel position="top-right" className="p-2">
+          <div className="flex gap-2">
+            <button
+              className="bg-white px-3 py-1 text-sm rounded border border-green-300 hover:bg-green-50"
+              onClick={() => onLayout("TB")}
+            >
+              Vertical Layout
+            </button>
+            <button
+              className="bg-white px-3 py-1 text-sm rounded border border-green-300 hover:bg-green-50"
+              onClick={() => onLayout("LR")}
+            >
+              Horizontal Layout
+            </button>
+          </div>
+        </Panel>
         <Background color="#e0f2e9" gap={16} size={1} />
         <Controls
           position="bottom-right"
