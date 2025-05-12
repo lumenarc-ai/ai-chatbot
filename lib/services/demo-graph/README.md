@@ -62,13 +62,13 @@ export async function POST(req: Request) {
 
   try {
     // Register MCP tools for AI assistant
-    const mcpTools = await demoGraphService.registerTools();
+    const demoGraphTools = await demoGraphService.registerTools();
 
     // Use tools with AI SDK
     const result = streamText({
       model: openai('gpt-4o'),
       messages,
-      tools: mcpTools,
+      tools: demoGraphTools,
       maxSteps: 10,
       onFinish: async () => {
         // Always close the client when done
@@ -209,13 +209,13 @@ Registers MCP tools for use with the AI SDK's streamText and generateText functi
 - **Returns**: `Promise<object>` - Object containing registered tools
 - **Usage**:
   ```typescript
-  const mcpTools = await demoGraphService.registerTools();
+  const demoGraphTools = await demoGraphService.registerTools();
 
   // Use with AI SDK
   const result = streamText({
     model: yourModel,
     messages,
-    tools: mcpTools,
+    tools: demoGraphTools,
     maxSteps: 5,
   });
   ```
@@ -310,7 +310,7 @@ All methods include proper error handling with detailed error messages and loggi
 
 5. **Schema Definitions**: For better type safety and IDE support, define schemas explicitly when using `registerTools()`:
    ```typescript
-   const mcpTools = await demoGraphService.registerTools({
+   const demoGraphTools = await demoGraphService.registerTools({
      schemas: {
        'tool-name': {
          parameters: z.object({

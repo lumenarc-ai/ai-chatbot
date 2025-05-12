@@ -17,14 +17,14 @@ import { z } from 'zod';
 export async function streamWithMCPTools(messages: any[]) {
   try {
     // Get the MCP tools
-    const mcpTools = await demoGraphService.registerTools();
+    const demoGraphTools = await demoGraphService.registerTools();
     
     // Create a stream with the MCP tools
     const stream = streamText({
       model: /* your model here */,
       messages,
       // Include the MCP tools
-      tools: mcpTools,
+      tools: demoGraphTools,
       // Allow multiple steps for tool calling
       maxSteps: 5,
       // Close the MCP client when the stream is finished
@@ -52,7 +52,7 @@ export async function streamWithMCPTools(messages: any[]) {
 export async function generateWithMCPTools(prompt: string) {
   try {
     // Get the MCP tools with explicit schema definitions
-    const mcpTools = await demoGraphService.registerTools({
+    const demoGraphTools = await demoGraphService.registerTools({
       schemas: {
         // Example schema definition for a hypothetical tool
         'get-data': {
@@ -72,7 +72,7 @@ export async function generateWithMCPTools(prompt: string) {
     const result = await generateText({
       model: /* your model here */,
       prompt,
-      tools: mcpTools,
+      tools: demoGraphTools,
       maxSteps: 5,
     });
     
@@ -98,7 +98,7 @@ export async function generateWithMCPTools(prompt: string) {
 export async function streamWithCombinedTools(messages: any[]) {
   try {
     // Get the MCP tools
-    const mcpTools = await demoGraphService.registerTools();
+    const demoGraphTools = await demoGraphService.registerTools();
     
     // Create a stream with both MCP tools and local tools
     const stream = streamText({
@@ -106,7 +106,7 @@ export async function streamWithCombinedTools(messages: any[]) {
       messages,
       // Combine MCP tools with local tools
       tools: {
-        ...mcpTools,
+        ...demoGraphTools,
         // Add a local tool
         localTool: {
           description: 'A local tool that does something',
