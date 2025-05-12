@@ -64,7 +64,7 @@ export function DemoGraphCanvas({
 
   // Extract title and description from the graph data
   const title = graphData.title || "Response IQ";
-  const description = graphData.description || "Demo graph | v0.1 | 2025-05-11";
+  // const description = graphData.description || "Demo graph | v0.1 | 2025-05-11";
   const visualizationType = graphData.visualizationType || "graph";
   const data = graphData.data || {};
 
@@ -104,14 +104,14 @@ export function DemoGraphCanvas({
   return (
     <div
       className={cx(
-        "flex flex-col gap-4 rounded-2xl p-4 skeleton-bg max-w-[800px]",
+        "flex flex-col gap-2 _rounded-xl p-2 skeleton-bg _max-w-[800px]",
         "bg-green-100 border border-green-200"
       )}
     >
       <div className="flex flex-row justify-between items-center">
         <div className="flex flex-row gap-2 items-center">
-          <DemoGraphLogo size={40} />
-          <div className="text-2xl font-medium text-green-800">{title}</div>
+          <DemoGraphLogo size={25} />
+          <div className="text-lg font-medium text-green-800">{title}</div>
         </div>
 
         {/* Copy button at top right - only show for JSON visualization */}
@@ -133,7 +133,7 @@ export function DemoGraphCanvas({
         )}
       </div>
 
-      <div className="text-green-700 text-sm">{description}</div>
+      {/* <div className="text-green-700 text-sm">{description}</div> */}
 
       {/* Render the appropriate visualization */}
       {renderVisualization()}

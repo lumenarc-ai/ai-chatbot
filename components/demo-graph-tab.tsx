@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { DemoGraphCanvas } from "./demo-graph-canvas";
+import { useDemoGraphData, DemoGraphData } from "@/hooks/use-demo-graph-data";
 
 // Define the visualization types
 export type VisualizationType = "json" | "graph" | "network";
@@ -30,7 +31,7 @@ export const VISUALIZATIONS: VisualizationConfig[] = [
 ];
 
 interface DemoGraphTabProps {
-  graphData: any;
+  graphData?: DemoGraphData;
   defaultVisualization?: VisualizationType;
 }
 
@@ -38,17 +39,34 @@ export function DemoGraphTab({
   graphData,
   defaultVisualization = "json",
 }: DemoGraphTabProps) {
-  const [activeTab, setActiveTab] =
-    useState<VisualizationType>(defaultVisualization);
+  // Use the shared demo graph data if no specific data is provided
+  const { graphData: sharedGraphData } = useDemoGraphData();
+  const dataToUse = graphData || sharedGraphData;
+
+  const [activeTab, setActiveTab] = useState<VisualizationType>(
+    dataToUse.visualizationType || defaultVisualization
+  );
+
+  // Update active tab when visualization type changes in the data
+  useEffect(() => {
+    if (
+      dataToUse.visualizationType &&
+      dataToUse.visualizationType !== activeTab
+    ) {
+      setActiveTab(dataToUse.visualizationType);
+    }
+  }, [dataToUse.visualizationType, activeTab]);
 
   // Create a copy of the graph data with the selected visualization type
   const visualizedData = {
-    data: graphData,
+    title: dataToUse.title,
+    description: dataToUse.description,
+    data: dataToUse.data,
     visualizationType: activeTab,
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col _gap-4">
       {/* Tabs */}
       <div className="flex border-b border-green-200">
         {VISUALIZATIONS.map((viz) => (

@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import type { Attachment, UIMessage } from 'ai';
-import { useChat } from '@ai-sdk/react';
-import { useEffect, useState } from 'react';
-import useSWR, { useSWRConfig } from 'swr';
-import { ChatHeader } from '@/components/chat-header';
-import type { Vote } from '@/lib/db/schema';
-import { fetcher, generateUUID } from '@/lib/utils';
-import { Artifact } from './artifact';
-import { MultimodalInput } from './multimodal-input';
-import { Messages } from './messages';
-import type { VisibilityType } from './visibility-selector';
-import { useArtifactSelector } from '@/hooks/use-artifact';
-import { unstable_serialize } from 'swr/infinite';
-import { getChatHistoryPaginationKey } from './sidebar-history';
-import { toast } from './toast';
-import type { Session } from 'next-auth';
-import { useSearchParams } from 'next/navigation';
-import { useChatVisibility } from '@/hooks/use-chat-visibility';
-import { useAutoResume } from '@/hooks/use-auto-resume';
+import type { Attachment, UIMessage } from "ai";
+import { useChat } from "@ai-sdk/react";
+import { useEffect, useState } from "react";
+import useSWR, { useSWRConfig } from "swr";
+import { ChatHeader } from "@/components/chat-header";
+import type { Vote } from "@/lib/db/schema";
+import { fetcher, generateUUID } from "@/lib/utils";
+import { Artifact } from "./artifact";
+import { MultimodalInput } from "./multimodal-input";
+import { Messages } from "./messages";
+import type { VisibilityType } from "./visibility-selector";
+import { useArtifactSelector } from "@/hooks/use-artifact";
+import { unstable_serialize } from "swr/infinite";
+import { getChatHistoryPaginationKey } from "./sidebar-history";
+import { toast } from "./toast";
+import type { Session } from "next-auth";
+import { useSearchParams } from "next/navigation";
+import { useChatVisibility } from "@/hooks/use-chat-visibility";
+import { useAutoResume } from "@/hooks/use-auto-resume";
 
 export function Chat({
   id,
@@ -73,32 +73,32 @@ export function Chat({
     },
     onError: (error) => {
       toast({
-        type: 'error',
+        type: "error",
         description: error.message,
       });
     },
   });
 
   const searchParams = useSearchParams();
-  const query = searchParams.get('query');
+  const query = searchParams.get("query");
 
   const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
 
   useEffect(() => {
     if (query && !hasAppendedQuery) {
       append({
-        role: 'user',
+        role: "user",
         content: query,
       });
 
       setHasAppendedQuery(true);
-      window.history.replaceState({}, '', `/chat/${id}`);
+      window.history.replaceState({}, "", `/chat/${id}`);
     }
   }, [query, append, hasAppendedQuery, id]);
 
   const { data: votes } = useSWR<Array<Vote>>(
     messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
-    fetcher,
+    fetcher
   );
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
@@ -114,7 +114,7 @@ export function Chat({
 
   return (
     <>
-      <div className="flex flex-col min-w-0 h-dvh bg-background">
+      <div className="flex flex-col min-w-0 h-full bg-background">
         <ChatHeader
           chatId={id}
           selectedModelId={initialChatModel}
@@ -154,6 +154,7 @@ export function Chat({
         </form>
       </div>
 
+      {/* Keep the Artifact component for compatibility, but it will be hidden in the two-column layout */}
       <Artifact
         chatId={id}
         input={input}
