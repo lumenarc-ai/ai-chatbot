@@ -669,13 +669,12 @@ export function GraphViewer({ data }: GraphViewerProps) {
   // State to track selected nodes
   const [selectedNodes, setSelectedNodes] = useState<Node[]>([]);
 
-  // Debug log to help diagnose issues
-  useEffect(() => {
-    console.log("GraphViewer data:", data);
-    if (data?.edges) {
-      console.log(`Found ${data.edges.length} edges in the data`);
-    }
-  }, [data]);
+  // // Debug log to help diagnose issues
+  // useEffect(() => {
+  //   if (data?.edges) {
+  //     console.log(`Found ${data.edges.length} edges in the data`);
+  //   }
+  // }, [data]);
 
   // Add a click handler to close the popup when clicking outside
   useEffect(() => {
@@ -708,7 +707,7 @@ export function GraphViewer({ data }: GraphViewerProps) {
     const nodes = data.nodes || [];
 
     if (!nodes.length) {
-      console.log("No nodes found in data:", data);
+      // console.log("No nodes found in data:", data);
       return [];
     }
 
@@ -817,8 +816,8 @@ export function GraphViewer({ data }: GraphViewerProps) {
         (data.nodes || []).map((node: any) => [node.id, node])
       );
 
-      // Debug log to help diagnose edge issues
-      console.log("Processing edges:", explicitEdges);
+      // // Debug log to help diagnose edge issues
+      // console.log("Processing edges:", explicitEdges);
 
       return explicitEdges
         .map((edge: any, index: number) => {
@@ -832,7 +831,7 @@ export function GraphViewer({ data }: GraphViewerProps) {
           }
 
           // Debug log for each edge
-          console.log(`Creating edge: ${source} -> ${target}`);
+          // console.log(`Creating edge: ${source} -> ${target}`);
 
           // Get the source node to determine action count
           const sourceNode = nodeMap.get(source) as any;
@@ -996,11 +995,11 @@ export function GraphViewer({ data }: GraphViewerProps) {
     []
   );
 
-  // Log the final nodes and edges for debugging
-  useEffect(() => {
-    console.log("Final nodes:", nodes);
-    console.log("Final edges:", edges);
-  }, [nodes, edges]);
+  // // Log the final nodes and edges for debugging
+  // useEffect(() => {
+  //   console.log("Final nodes:", nodes);
+  //   console.log("Final edges:", edges);
+  // }, [nodes, edges]);
 
   // Function to apply layout in different directions
   const onLayout = useCallback(

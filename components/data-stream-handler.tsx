@@ -33,6 +33,7 @@ export function DataStreamHandler({ id }: { id: string }) {
 
   // Process tool calls from the data stream
   useEffect(() => {
+    console.log("delta item:", dataStream);
     if (!dataStream?.length) return;
 
     const newDeltas = dataStream.slice(lastProcessedIndex.current + 1);
@@ -74,6 +75,7 @@ export function DataStreamHandler({ id }: { id: string }) {
                   ? JSON.parse(toolResult.result)
                   : toolResult.result;
 
+              debugger;
               updateGraphData(toolName, resultData);
             } catch (error) {
               console.error("Error processing demo graph tool result:", error);
