@@ -5,6 +5,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { auth } from "../(auth)/auth";
 import Script from "next/script";
 import { DemoGraphProvider } from "@/hooks/use-demo-graph-data";
+import { VoiceDebuggerProvider } from "@/hooks/use-voice-debugger";
 import { TwoColumnLayout } from "@/components/two-column-layout";
 
 export const experimental_ppr = true;
@@ -24,12 +25,14 @@ export default async function Layout({
         strategy="beforeInteractive"
       />
       <DemoGraphProvider>
-        <SidebarProvider defaultOpen={!isCollapsed}>
-          <AppSidebar user={session?.user} />
-          <SidebarInset>
-            <TwoColumnLayout>{children}</TwoColumnLayout>
-          </SidebarInset>
-        </SidebarProvider>
+        <VoiceDebuggerProvider>
+          <SidebarProvider defaultOpen={!isCollapsed}>
+            <AppSidebar user={session?.user} />
+            <SidebarInset>
+              <TwoColumnLayout>{children}</TwoColumnLayout>
+            </SidebarInset>
+          </SidebarProvider>
+        </VoiceDebuggerProvider>
       </DemoGraphProvider>
     </>
   );

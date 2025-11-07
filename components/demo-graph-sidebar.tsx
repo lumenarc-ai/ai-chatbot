@@ -1,11 +1,12 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { DemoGraphTab } from "./demo-graph-tab";
 import { useDemoGraphData } from "@/hooks/use-demo-graph-data";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { ChevronRightIcon, ChevronLeftIcon } from "./icons";
+import { VoiceDebugger } from "@/components/voice-debugger";
 import {
   Tooltip,
   TooltipContent,
@@ -84,23 +85,25 @@ export function DemoGraphSidebar({ children }: DemoGraphSidebarProps) {
           }`}
         >
           {isOpen && (
-            <div className="h-full flex flex-col p-4">
-              <div className="mb-2 flex justify-between items-center">
+            <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+              <div className="flex justify-between items-center">
                 <div className="text-xs text-muted-foreground">
                   {graphData.toolName
                     ? `Last updated by: ${graphData.toolName}`
                     : "Ready for data"}
                 </div>
               </div>
-              <div className="flex-1 overflow-hidden rounded-lg border border-border bg-card">
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
                 <DemoGraphTab graphData={graphData} />
               </div>
+              <VoiceDebugger />
             </div>
           )}
         </div>
 
         {/* Toggle button */}
         <button
+          type="button"
           onClick={toggleSidebar}
           className="fixed bottom-4 right-4 z-50 bg-primary text-primary-foreground rounded-full p-3 shadow-lg"
           aria-label={isOpen ? "Show Chat" : "Show Graph"}
@@ -126,10 +129,11 @@ export function DemoGraphSidebar({ children }: DemoGraphSidebarProps) {
         )}
       >
         {isOpen && (
-          <div className="h-full flex flex-col p-2">
-            <div className="flex-1 overflow-hidden rounded-lg border border-border bg-card">
+          <div className="flex h-full flex-col gap-3 overflow-y-auto p-2">
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
               <DemoGraphTab graphData={graphData} />
             </div>
+            <VoiceDebugger />
           </div>
         )}
       </div>
