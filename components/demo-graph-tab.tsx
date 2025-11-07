@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { DemoGraphCanvas } from "./demo-graph-canvas";
-import { useDemoGraphData, DemoGraphData } from "@/hooks/use-demo-graph-data";
+import { useDemoGraphData, type DemoGraphData } from "@/hooks/use-demo-graph-data";
 
 // Define the visualization types
 export type VisualizationType = "json" | "graph" | "network";
@@ -71,6 +71,7 @@ export function DemoGraphTab({
       <div className="flex border-b border-green-200">
         {VISUALIZATIONS.map((viz) => (
           <button
+            type="button"
             key={viz.id}
             onClick={() => setActiveTab(viz.id)}
             className={cn(

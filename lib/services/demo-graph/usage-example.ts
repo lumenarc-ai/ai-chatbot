@@ -21,7 +21,7 @@ export async function streamWithMCPTools(messages: any[]) {
     
     // Create a stream with the MCP tools
     const stream = streamText({
-      model: /* your model here */,
+      model: "your-model-id" as any,
       messages,
       // Include the MCP tools
       tools: demoGraphTools,
@@ -70,7 +70,7 @@ export async function generateWithMCPTools(prompt: string) {
     
     // Generate text with the MCP tools
     const result = await generateText({
-      model: /* your model here */,
+      model: "your-model-id" as any,
       prompt,
       tools: demoGraphTools,
       maxSteps: 5,
@@ -102,7 +102,7 @@ export async function streamWithCombinedTools(messages: any[]) {
     
     // Create a stream with both MCP tools and local tools
     const stream = streamText({
-      model: /* your model here */,
+      model: "your-model-id" as any,
       messages,
       // Combine MCP tools with local tools
       tools: {
